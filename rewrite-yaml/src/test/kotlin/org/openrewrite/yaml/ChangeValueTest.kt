@@ -130,6 +130,100 @@ class ChangeValueTest : YamlRecipeTest {
     )
 
     @Test
+    fun testRecursiveDescent() = assertChanged(
+        recipe = ChangeValue(
+            "$..[?(@.kind == 'ServiceAccount')].kind",
+            "Deployment",
+            null
+        ),
+        before = """
+            subjects:
+              - kind: User
+                name: some-user
+              - kind: ServiceAccount
+                name: monitoring-tools
+        """,
+        after = """
+            subjects:
+              - kind: User
+                name: some-user
+              - kind: Deployment
+                name: monitoring-tools
+        """
+    )
+
+    @Test
+    fun nestedSequences() = assertChanged(
+        recipe = ChangeValue(
+            "$.something[*].steps[?(@.task == 'ABC')].task",
+            "YYY",
+            null
+        ),
+        before = """
+            something:
+              - steps: 
+                - task: ABC
+                - task: ZZZ
+        """,
+        after = """
+            something:
+              - steps: 
+                - task: YYY
+                - task: ZZZ
+        """
+    )
+
+    @Test
+    fun changeSequenceKeyByExactMatchWildcard() = assertChanged(
+        recipe = ChangeValue(
+            "$.*[?(@.kind == 'ServiceAccount')].kind",
+            "Deployment",
+            null
+        ),
+        before = """
+            subjects:
+              - kind: User
+                name: some-user
+              - kind: ServiceAccount
+                name: monitoring-tools
+        """,
+        after = """
+            subjects:
+              - kind: User
+                name: some-user
+              - kind: Deployment
+                name: monitoring-tools
+        """
+    )
+
+    @Test
+    fun changeNestedCollectionValues() = assertChanged(
+        recipe = ChangeValue(
+            "$.toc[*].section[?(@.subsection == 'ABC')].subsection",
+            "XYZ",
+            null
+        ),
+        before = """
+            toc:
+              - section:
+                - subsection: ABB
+                - subsection: ABC
+              - section:
+                - subsection: AAA
+                - subsection: ZZZ 
+        """,
+        after = """
+            toc:
+              - section:
+                - subsection: ABB
+                - subsection: XYZ
+              - section:
+                - subsection: AAA
+                - subsection: ZZZ
+        """
+    )
+
+    @Test
     fun changeOnlyMatchingFile(@TempDir tempDir: Path) {
         val matchingFile = tempDir.resolve("a.yml").apply {
             toFile().parentFile.mkdirs()
